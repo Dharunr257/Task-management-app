@@ -15,4 +15,4 @@ jobs:
 
       - name: Run HCHI Deployment Engine
         run: |
-          /mnt/homelab-storage/platform/sync-app.sh
+          sync-app task-management-app
