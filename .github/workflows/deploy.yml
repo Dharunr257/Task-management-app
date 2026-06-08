@@ -1,0 +1,18 @@
+name: HCHI Automated Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run HCHI Deployment Engine
+        run: |
+          /mnt/homelab-storage/platform/deploy-local-app.sh
