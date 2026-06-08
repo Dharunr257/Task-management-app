@@ -1,56 +1,99 @@
 # HCHI Deployable Application Standard
 
-## Purpose
+## Hybrid Cloud HomeLab Infrastructure (HCHI)
 
-This document defines the required project structure and deployment standards for applications deployed into the Hybrid Cloud HomeLab Infrastructure (HCHI) platform.
+This document defines the required structure, deployment workflow, and CI/CD standards for applications deployed into the HCHI Platform Infrastructure.
 
-Every application must follow this structure so the automated deployment engine can:
+The goal of this standard is to ensure:
 
-* Build Docker images
-* Deploy containers automatically
-* Configure networking
-* Register applications
-* Support intelligent routing
-* Enable monitoring and rollback systems
+* reusable deployments
+* automated CI/CD
+* intelligent routing
+* Dockerized hosting
+* centralized infrastructure management
+* scalable multi-application hosting
 
 ---
 
-# Standard Application Structure
+# 1. Standard Application Structure
 
-```text
+Every deployable application must follow this structure:
+
+```text id="ukd83m"
 app-name/
 ├── Dockerfile
 ├── deployment.json
 ├── .dockerignore
 ├── README.md
-├── src/
-├── public/
-├── package.json
-└── application source files
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── backend/
+├── frontend/
+└── application source code
 ```
 
 ---
 
-# Required Files
+# 2. Required Files
 
-| File               | Required | Purpose                                 |
-| ------------------ | -------- | --------------------------------------- |
-| Dockerfile         | YES      | Defines container build process         |
-| deployment.json    | YES      | Deployment metadata for platform engine |
-| .dockerignore      | YES      | Optimizes Docker image builds           |
-| README.md          | YES      | Application documentation               |
-| package.json       | Optional | Node.js dependency management           |
-| docker-compose.yml | Optional | Local development only                  |
+| File            | Required | Purpose                             |
+| --------------- | -------- | ----------------------------------- |
+| Dockerfile      | YES      | Container build instructions        |
+| deployment.json | YES      | HCHI deployment metadata            |
+| .dockerignore   | YES      | Optimized Docker builds             |
+| deploy.yml      | YES      | Automated GitHub Actions deployment |
+| README.md       | YES      | Project documentation               |
 
 ---
 
-# 1. Dockerfile
+# 3. deployment.json Standard
 
-The Dockerfile defines how the application is containerized.
+This file is REQUIRED.
 
-## Static Website Example
+The HCHI deployment engine reads this configuration automatically.
 
-```dockerfile
+## Example
+
+```json id="sma28q"
+{
+  "app_name": "task-management-app",
+  "container_name": "task-manager-app",
+  "internal_domain": "task-manager.homelab",
+  "container_port": 3031,
+  "host_port": 3031,
+  "health_endpoint": "/api/health",
+  "restart_policy": "unless-stopped",
+  "network": "homelab-network"
+}
+```
+
+---
+
+# 4. deployment.json Field Definitions
+
+| Field           | Purpose                         |
+| --------------- | ------------------------------- |
+| app_name        | Docker image name               |
+| container_name  | Docker container name           |
+| internal_domain | Internal reverse proxy domain   |
+| container_port  | Internal application port       |
+| host_port       | Raspberry Pi exposed port       |
+| health_endpoint | Health monitoring endpoint      |
+| restart_policy  | Docker restart strategy         |
+| network         | Docker network used for routing |
+
+---
+
+# 5. Dockerfile Standards
+
+Applications MUST be Dockerized.
+
+---
+
+## Example — Static Frontend
+
+```dockerfile id="as81qz"
 FROM nginx:alpine
 
 COPY . /usr/share/nginx/html
@@ -60,9 +103,9 @@ EXPOSE 80
 
 ---
 
-## Node.js Example
+## Example — Node.js Backend
 
-```dockerfile
+```dockerfile id="vm27pl"
 FROM node:20-alpine
 
 WORKDIR /app
@@ -73,219 +116,262 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE 3031
 
 CMD ["npm", "start"]
 ```
 
 ---
 
-# 2. deployment.json
+# 6. Frontend Deployment Rules
 
-This file is REQUIRED.
+For React/Vite applications:
 
-The HCHI deployment engine reads this file to automatically configure infrastructure.
+## vite.config.js MUST include:
 
-## Standard Format
+```js id="pw93rm"
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-```json
-{
-  "app_name": "dashboard",
-  "container_name": "dashboard-app",
-  "internal_domain": "dashboard.homelab",
-  "container_port": 80,
-  "host_port": 3000,
-  "health_endpoint": "/",
-  "restart_policy": "unless-stopped",
-  "network": "homelab-network"
-}
+export default defineConfig({
+  plugins: [react()],
+  base: './'
+})
+```
+
+This ensures:
+
+* reverse proxy compatibility
+* proper asset loading
+* Dockerized deployment support
+
+---
+
+# 7. Static Asset Rules
+
+Applications MUST use:
+
+* relative asset paths
+* proxy-safe routing
+* SPA-compatible configuration
+
+Avoid hardcoded:
+
+```text id="dq71xa"
+/assets/...
+```
+
+Prefer:
+
+```text id="bc62yw"
+./assets/...
 ```
 
 ---
 
-# deployment.json Field Definitions
+# 8. GitHub Actions Deployment Workflow
 
-| Field           | Description                |
-| --------------- | -------------------------- |
-| app_name        | Logical application name   |
-| container_name  | Docker container name      |
-| internal_domain | Internal routing hostname  |
-| container_port  | Port inside container      |
-| host_port       | Exposed Raspberry Pi port  |
-| health_endpoint | Health monitoring endpoint |
-| restart_policy  | Docker restart policy      |
-| network         | Docker network for routing |
+Every application must include:
 
----
-
-# 3. .dockerignore
-
-Prevents unnecessary files from entering Docker image builds.
-
-## Recommended Template
-
-```text
-node_modules
-.git
-.github
-README.md
-.env
-Dockerfile.old
+```text id="lz51mn"
+.github/workflows/deploy.yml
 ```
 
 ---
 
-# Docker Networking Requirement
+## Standard Workflow
 
-All applications MUST connect to:
+```yaml id="ft20vk"
+name: HCHI Automated Deployment
 
-```text
-homelab-network
-```
+on:
+  push:
+    branches:
+      - main
 
-This enables:
+jobs:
+  deploy:
+    runs-on: self-hosted
 
-* NGINX Proxy Manager routing
-* Internal service discovery
-* Multi-application communication
-* Intelligent routing infrastructure
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
----
-
-# Internal Routing Standard
-
-Applications should be accessible through:
-
-```text
-app-name.homelab
-```
-
-Examples:
-
-```text
-dashboard.homelab
-portfolio.homelab
-api.homelab
-analytics.homelab
+      - name: Run HCHI Deployment Engine
+        run: |
+          /mnt/homelab-storage/platform/deploy-local-app.sh
 ```
 
 ---
 
-# Deployment Workflow
+# 9. HCHI Automated Deployment Flow
 
-```text
+```text id="eg47qs"
 Developer Laptop
         ↓
 Git Push
         ↓
 GitHub Repository
         ↓
-Self-Hosted GitHub Runner
+GitHub Actions
+        ↓
+Self-Hosted Runner (Pi 5)
         ↓
 HCHI Deployment Engine
         ↓
 Docker Build & Deployment
         ↓
-NGINX Internal Routing
+NGINX Proxy Manager Routing
+        ↓
+Application Live
 ```
 
 ---
 
-# Local Development Guidelines
+# 10. Initial Deployment Process
 
-Applications should:
-
-* Run locally before deployment
-* Build successfully using Docker
-* Expose correct ports
-* Avoid hardcoded IP addresses
-* Support environment variables when needed
+When deploying a NEW application for the first time:
 
 ---
 
-# Recommended Docker Practices
+## Step 1 — Create GitHub Repository
 
-## Use lightweight images
-
-Preferred:
-
-* nginx:alpine
-* node:alpine
+Push application source code from laptop to GitHub.
 
 ---
 
-## Use restart policies
+## Step 2 — Ensure Required Files Exist
 
-Recommended:
+Required:
 
-```json
-"restart_policy": "unless-stopped"
+* Dockerfile
+* deployment.json
+* .github/workflows/deploy.yml
+
+---
+
+## Step 3 — Verify Self-Hosted Runner Online
+
+On GitHub:
+
+* Repository
+* Settings
+* Actions
+* Runners
+
+Ensure Raspberry Pi runner is:
+
+```text id="op18zr"
+Idle
 ```
 
 ---
 
-## Avoid privileged containers
+## Step 4 — Push to Main Branch
 
-Do not use:
+```bash id="ce74yn"
+git add .
 
-* privileged mode
-* host networking
-* unnecessary capabilities
+git commit -m "Initial deployment"
 
-unless absolutely required.
-
----
-
-# CI/CD Compatibility Requirements
-
-Applications should:
-
-* Build without manual interaction
-* Start automatically
-* Support automated redeployment
-* Avoid interactive prompts
-* Support reproducible builds
+git push
+```
 
 ---
 
-# Future HCHI Platform Features
+## Step 5 — GitHub Actions Automatically Deploys
 
-Applications deployed using this standard will support:
+The HCHI platform will automatically:
 
-* Automated deployment
+* build Docker image
+* create container
+* attach Docker network
+* configure restart policy
+* create NGINX route
+* expose application
+
+---
+
+# 11. Accessing Applications
+
+Applications can be accessed using:
+
+## Direct Port Access
+
+```text id="ik59tw"
+http://192.168.1.10:3031
+```
+
+---
+
+## Intelligent Internal Routing
+
+```text id="hy42pb"
+http://task-manager.homelab
+```
+
+---
+
+# 12. Local DNS Setup (Laptop)
+
+Add internal domains to:
+
+```text id="ju84xn"
+C:\Windows\System32\drivers\etc\hosts
+```
+
+Example:
+
+```text id="gb30rm"
+192.168.1.10 task-manager.homelab
+```
+
+---
+
+# 13. HCHI Platform Features
+
+Applications deployed into HCHI automatically support:
+
+* Dockerized deployment
+* Self-hosted CI/CD
+* Reverse proxy routing
+* Internal intelligent routing
 * Multi-app hosting
-* Intelligent internal routing
-* Internal DNS
-* Monitoring & observability
-* Deployment dashboard
-* Rollback system
-* Health checks
-* Automatic recovery
+* Automatic restart policies
+* Centralized deployment engine
+* Reusable infrastructure patterns
 
 ---
 
-# HCHI Platform Philosophy
+# 14. Future Platform Features
 
-The goal of this platform is to create:
+Planned upgrades include:
 
-* Self-hosted infrastructure
-* Private CI/CD systems
-* Intelligent internal routing
-* Dockerized hosting infrastructure
-* Platform engineering workflows
-* Enterprise-style homelab architecture
+* automatic rollback system
+* deployment dashboard
+* internal DNS via Pi-hole
+* monitoring & observability
+* deployment logs visualization
+* health monitoring
+* automatic SSL
+* deployment registry
 
 ---
 
-# Final Notes
+# 15. HCHI Platform Philosophy
 
-All applications deployed into HCHI should be:
+The HCHI platform is designed to simulate:
 
-* Portable
-* Dockerized
-* Automated
-* Reproducible
-* Scalable
-* Observable
+* enterprise DevOps workflows
+* platform engineering concepts
+* self-hosted cloud infrastructure
+* intelligent routing systems
+* automated CI/CD pipelines
 
-Following this standard ensures the platform remains maintainable and extensible as the infrastructure grows.
+The focus is:
+
+* zero-cost infrastructure
+* open-source tooling
+* Raspberry Pi hosting
+* AWS free-tier integration
+* real-world infrastructure engineering experience

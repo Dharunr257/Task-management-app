@@ -1,5 +1,5 @@
 {
-  "app_name": "task-manager",
+  "app_name": "task-management-app",
   "container_name": "task-manager-app",
   "internal_domain": "task-manager.homelab",
   "container_port": 3031,
