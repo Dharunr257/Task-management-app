@@ -1,0 +1,10 @@
+{
+  "app_name": "task-manager",
+  "container_name": "task-manager-app",
+  "internal_domain": "task-manager.homelab",
+  "container_port": 3031,
+  "host_port": 3031,
+  "health_endpoint": "/api/health",
+  "restart_policy": "unless-stopped",
+  "network": "homelab-network"
+}
