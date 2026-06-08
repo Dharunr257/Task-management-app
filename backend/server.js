@@ -18,6 +18,12 @@ let tasks = [
     column: 'todo',
     priority: 'high',
     dueDate: '2026-06-15',
+    assignee: 'Alice Smith',
+    tags: ['Network', 'DNS'],
+    subtasks: [
+      { id: 'sub-1', title: 'Install Pi-hole on master node', completed: true },
+      { id: 'sub-2', title: 'Configure local DNS mapping rules', completed: false }
+    ],
     createdAt: new Date('2026-06-08T08:00:00.000Z').toISOString()
   },
   {
@@ -27,6 +33,13 @@ let tasks = [
     column: 'in_progress',
     priority: 'high',
     dueDate: '2026-06-10',
+    assignee: 'Bob Jones',
+    tags: ['DevOps', 'Docker'],
+    subtasks: [
+      { id: 'sub-3', title: 'Spin up runner VM on Homelab hypervisor', completed: true },
+      { id: 'sub-4', title: 'Register runner token with platform master', completed: false },
+      { id: 'sub-5', title: 'Validate automatic build pipelines', completed: false }
+    ],
     createdAt: new Date('2026-06-08T09:00:00.000Z').toISOString()
   },
   {
@@ -36,6 +49,13 @@ let tasks = [
     column: 'review',
     priority: 'medium',
     dueDate: '2026-06-09',
+    assignee: 'Charlie Brown',
+    tags: ['Docker', 'HCHI'],
+    subtasks: [
+      { id: 'sub-6', title: 'Write production-ready multi-stage Dockerfile', completed: true },
+      { id: 'sub-7', title: 'Define routing properties in deployment.json', completed: true },
+      { id: 'sub-8', title: 'Test container execution footprint', completed: false }
+    ],
     createdAt: new Date('2026-06-08T10:00:00.000Z').toISOString()
   },
   {
@@ -45,6 +65,12 @@ let tasks = [
     column: 'done',
     priority: 'low',
     dueDate: '2026-06-08',
+    assignee: 'Dharun',
+    tags: ['Security', 'HCHI'],
+    subtasks: [
+      { id: 'sub-9', title: 'Review standard routing requirements', completed: true },
+      { id: 'sub-10', title: 'Identify allowed external network endpoints', completed: true }
+    ],
     createdAt: new Date('2026-06-08T07:00:00.000Z').toISOString()
   }
 ];
@@ -61,7 +87,7 @@ app.get('/api/tasks', (req, res) => {
 
 // Create a new task
 app.post('/api/tasks', (req, res) => {
-  const { title, description, column, priority, dueDate } = req.body;
+  const { title, description, column, priority, dueDate, assignee, tags, subtasks } = req.body;
   
   if (!title) {
     return res.status(400).json({ error: 'Title is required' });
@@ -74,6 +100,9 @@ app.post('/api/tasks', (req, res) => {
     column: column || 'todo',
     priority: priority || 'medium',
     dueDate: dueDate || '',
+    assignee: assignee || '',
+    tags: tags || [],
+    subtasks: subtasks || [],
     createdAt: new Date().toISOString()
   };
 
@@ -84,7 +113,7 @@ app.post('/api/tasks', (req, res) => {
 // Update a task
 app.put('/api/tasks/:id', (req, res) => {
   const { id } = req.params;
-  const { title, description, column, priority, dueDate } = req.body;
+  const { title, description, column, priority, dueDate, assignee, tags, subtasks } = req.body;
 
   const taskIndex = tasks.findIndex(t => t.id === id);
   if (taskIndex === -1) {
@@ -97,7 +126,10 @@ app.put('/api/tasks/:id', (req, res) => {
     description: description !== undefined ? description : tasks[taskIndex].description,
     column: column !== undefined ? column : tasks[taskIndex].column,
     priority: priority !== undefined ? priority : tasks[taskIndex].priority,
-    dueDate: dueDate !== undefined ? dueDate : tasks[taskIndex].dueDate
+    dueDate: dueDate !== undefined ? dueDate : tasks[taskIndex].dueDate,
+    assignee: assignee !== undefined ? assignee : tasks[taskIndex].assignee,
+    tags: tags !== undefined ? tags : tasks[taskIndex].tags,
+    subtasks: subtasks !== undefined ? subtasks : tasks[taskIndex].subtasks
   };
 
   tasks[taskIndex] = updatedTask;

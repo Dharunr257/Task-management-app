@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
@@ -6,8 +6,6 @@ import {
   Calendar, 
   Edit3, 
   Trash2, 
-  CheckCircle2, 
-  Clock, 
   AlertCircle, 
   ChevronRight, 
   ChevronLeft, 
@@ -15,7 +13,15 @@ import {
   Activity,
   AlertTriangle,
   Sun,
-  Moon
+  Moon,
+  ChevronDown,
+  ChevronUp,
+  CheckSquare,
+  User,
+  BarChart3,
+  Sparkles,
+  ArrowUpDown,
+  TrendingUp
 } from 'lucide-react';
 
 const COLUMNS = [
@@ -24,6 +30,80 @@ const COLUMNS = [
   { id: 'review', title: 'Review', color: 'border-t-purple-500 text-purple-600 dark:text-purple-400 bg-purple-500/5' },
   { id: 'done', title: 'Done', color: 'border-t-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5' }
 ];
+
+const generateParticles = () => {
+  const particles = [];
+  const colors = ['#6366f1', '#a855f7', '#10b981', '#f59e0b', '#f43f5e', '#3b82f6'];
+  const shapes = ['circle', 'square', 'triangle'];
+  for (let i = 0; i < 45; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const velocity = 65 + Math.random() * 125;
+    const dx = Math.cos(angle) * velocity;
+    const dy = Math.sin(angle) * velocity - 25; // float upwards
+    const rot = Math.random() * 360 + 360;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+    particles.push({
+      id: `p-${Date.now()}-${i}-${Math.random()}`,
+      dx: `${dx}px`,
+      dy: `${dy}px`,
+      rot: `${rot}deg`,
+      color,
+      shape,
+      size: `${4 + Math.random() * 8}px`
+    });
+  }
+  return particles;
+};
+
+// Stable avatar gradient generator
+const getAvatarGradient = (name) => {
+  if (!name) return 'from-slate-400 to-slate-500';
+  const gradients = [
+    'from-pink-500 to-rose-500',
+    'from-indigo-500 to-blue-500',
+    'from-emerald-500 to-teal-500',
+    'from-amber-500 to-orange-500',
+    'from-purple-500 to-indigo-500',
+    'from-cyan-500 to-sky-500'
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % gradients.length;
+  return gradients[index];
+};
+
+const getInitials = (name) => {
+  if (!name) return '';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
+
+// Tag color classes
+const getTagColorClass = (tag) => {
+  const lower = tag.toLowerCase();
+  if (lower === 'network' || lower === 'dns') {
+    return 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20';
+  }
+  if (lower === 'devops' || lower === 'docker') {
+    return 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20';
+  }
+  if (lower === 'hchi' || lower === 'homelab') {
+    return 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20';
+  }
+  if (lower === 'security') {
+    return 'bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20';
+  }
+  if (lower === 'database' || lower === 'backend' || lower === 'frontend') {
+    return 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20';
+  }
+  return 'bg-slate-100 dark:bg-slate-500/10 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-500/20';
+};
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -52,6 +132,24 @@ export default function App() {
   // Search and Filter State
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
+
+  // Dashboard state
+  const [showDashboard, setShowDashboard] = useState(() => {
+    return localStorage.getItem('hchi-dashboard-visible') !== 'false';
+  });
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState('none'); // 'none', 'priority', 'dueDate', 'createdAt'
+
+  // Confetti state
+  const [confettiParticles, setConfettiParticles] = useState([]);
+
+  // Expanded subtasks state for individual cards
+  const [expandedCardSubtasks, setExpandedCardSubtasks] = useState({});
+
+  // Form states for Tags & Subtasks
+  const [newTagInput, setNewTagInput] = useState('');
+  const [newSubtaskInput, setNewSubtaskInput] = useState('');
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -61,18 +159,16 @@ export default function App() {
     description: '',
     column: 'todo',
     priority: 'medium',
-    dueDate: ''
+    dueDate: '',
+    assignee: '',
+    tags: [],
+    subtasks: []
   });
   const [formError, setFormError] = useState('');
 
   // Drag and Drop state
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [activeDropColumn, setActiveDropColumn] = useState(null);
-
-  // Fetch tasks on mount
-  useEffect(() => {
-    loadTasks();
-  }, []);
 
   const loadTasks = async () => {
     setLoading(true);
@@ -94,6 +190,12 @@ export default function App() {
           column: 'todo',
           priority: 'high',
           dueDate: new Date().toISOString().split('T')[0],
+          assignee: 'Alice Smith',
+          tags: ['Network', 'DNS'],
+          subtasks: [
+            { id: 'sub-l1', title: 'Verify router endpoints', completed: false },
+            { id: 'sub-l2', title: 'Test network loopback', completed: true }
+          ],
           createdAt: new Date().toISOString()
         }
       ]);
@@ -101,6 +203,80 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  // Fetch tasks on mount
+  useEffect(() => {
+    let ignore = false;
+    Promise.resolve().then(() => {
+      if (!ignore) {
+        loadTasks();
+      }
+    });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Confetti generator
+  const triggerConfetti = () => {
+    setConfettiParticles(generateParticles());
+    setTimeout(() => {
+      setConfettiParticles([]);
+    }, 1200);
+  };
+
+  // Toggle dashboard visibility
+  const toggleDashboard = () => {
+    setShowDashboard(prev => {
+      const next = !prev;
+      localStorage.setItem('hchi-dashboard-visible', String(next));
+      return next;
+    });
+  };
+
+  // Toggle subtask check directly on card
+  const handleToggleSubtask = async (taskId, subtaskId) => {
+    const updatedTasks = tasks.map(t => {
+      if (t.id === taskId) {
+        const updatedSubtasks = (t.subtasks || []).map(s => {
+          if (s.id === subtaskId) {
+            return { ...s, completed: !s.completed };
+          }
+          return s;
+        });
+        return { ...t, subtasks: updatedSubtasks };
+      }
+      return t;
+    });
+    setTasks(updatedTasks);
+
+    const taskToUpdate = updatedTasks.find(t => t.id === taskId);
+    if (!taskToUpdate) return;
+
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskToUpdate)
+      });
+      if (!response.ok) throw new Error('Failed to toggle subtask');
+      setApiOnline(true);
+    } catch (error) {
+      console.error('Subtask Toggle Sync Error:', error);
+      setApiOnline(false);
+      loadTasks();
+    }
+  };
+
+  // Toggle subtask expanded view on card
+  const toggleCardSubtasksExpand = (taskId) => {
+    setExpandedCardSubtasks(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId]
+    }));
+  };
+
+
 
   // Check API health periodically
   useEffect(() => {
@@ -127,8 +303,13 @@ export default function App() {
       description: '',
       column: columnId,
       priority: 'medium',
-      dueDate: new Date().toISOString().split('T')[0]
+      dueDate: new Date().toISOString().split('T')[0],
+      assignee: '',
+      tags: [],
+      subtasks: []
     });
+    setNewTagInput('');
+    setNewSubtaskInput('');
     setFormError('');
     setIsModalOpen(true);
   };
@@ -140,8 +321,13 @@ export default function App() {
       description: task.description,
       column: task.column,
       priority: task.priority,
-      dueDate: task.dueDate || ''
+      dueDate: task.dueDate || '',
+      assignee: task.assignee || '',
+      tags: task.tags || [],
+      subtasks: task.subtasks || []
     });
+    setNewTagInput('');
+    setNewSubtaskInput('');
     setFormError('');
     setIsModalOpen(true);
   };
@@ -149,6 +335,47 @@ export default function App() {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddTag = () => {
+    if (!newTagInput.trim()) return;
+    const tag = newTagInput.trim();
+    if (!formData.tags.includes(tag)) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, tag]
+      }));
+    }
+    setNewTagInput('');
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(t => t !== tagToRemove)
+    }));
+  };
+
+  const handleAddSubtask = () => {
+    if (!newSubtaskInput.trim()) return;
+    const subtaskTitle = newSubtaskInput.trim();
+    const newSubtask = {
+      id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      title: subtaskTitle,
+      completed: false
+    };
+    setFormData(prev => ({
+      ...prev,
+      subtasks: [...prev.subtasks, newSubtask]
+    }));
+    setNewSubtaskInput('');
+  };
+
+  const handleRemoveSubtask = (subtaskId) => {
+    setFormData(prev => ({
+      ...prev,
+      subtasks: prev.subtasks.filter(s => s.id !== subtaskId)
+    }));
   };
 
   const handleSaveTask = async (e) => {
@@ -163,7 +390,10 @@ export default function App() {
       description: formData.description.trim(),
       column: formData.column,
       priority: formData.priority,
-      dueDate: formData.dueDate
+      dueDate: formData.dueDate,
+      assignee: formData.assignee.trim(),
+      tags: formData.tags,
+      subtasks: formData.subtasks
     };
 
     // Optimistic UI updates
@@ -248,6 +478,10 @@ export default function App() {
     });
     setTasks(updatedTasks);
 
+    if (newColumn === 'done') {
+      triggerConfetti();
+    }
+
     const taskToUpdate = tasks.find(t => t.id === taskId);
     if (!taskToUpdate) return;
 
@@ -322,6 +556,30 @@ export default function App() {
       default:
         return 'bg-slate-100 dark:bg-slate-500/10 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-500/20';
     }
+  };
+
+  // Calculate dashboard statistics
+  const completedTasksCount = tasks.filter(t => t.column === 'done').length;
+  const overdueCount = tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date(new Date().setHours(0,0,0,0)) && t.column !== 'done').length;
+  const highPriorityCount = tasks.filter(t => t.priority === 'high' && t.column !== 'done').length;
+  const completionPercentage = tasks.length ? Math.round((completedTasksCount / tasks.length) * 100) : 0;
+
+  const sortTasks = (taskList) => {
+    if (sortBy === 'priority') {
+      const priorityWeight = { high: 3, medium: 2, low: 1 };
+      return [...taskList].sort((a, b) => priorityWeight[b.priority] - priorityWeight[a.priority]);
+    }
+    if (sortBy === 'dueDate') {
+      return [...taskList].sort((a, b) => {
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      });
+    }
+    if (sortBy === 'createdAt') {
+      return [...taskList].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+    return taskList;
   };
 
   return (
@@ -408,6 +666,80 @@ export default function App() {
         </div>
       </header>
 
+      {/* Analytics Dashboard Panel */}
+      <div className="max-w-7xl w-full mx-auto px-4 md:px-6 pt-6 flex-shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <button
+            onClick={toggleDashboard}
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer select-none bg-slate-100/60 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 px-3 py-1.5 rounded-xl"
+          >
+            <BarChart3 size={14} className="text-indigo-500" />
+            <span>{showDashboard ? 'Hide Analytics Dashboard' : 'Show Analytics Dashboard'}</span>
+            {showDashboard ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
+        </div>
+
+        <div className={`dashboard-collapse ${showDashboard ? '' : 'collapsed'}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/70 bg-white/50 dark:bg-slate-950/20 backdrop-blur-md mb-2 shadow-sm">
+            {/* Board Completion Progress */}
+            <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/20 relative overflow-hidden group">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Completion Rate</span>
+                <TrendingUp size={16} className="text-emerald-500" />
+              </div>
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="text-2xl font-black text-slate-800 dark:text-white">{completionPercentage}%</span>
+                <span className="text-xs text-slate-500">({completedTasksCount}/{tasks.length} tasks)</span>
+              </div>
+              <div className="progress-bar-bg h-2 w-full">
+                <div className="progress-bar-fill bg-gradient-to-r from-indigo-500 to-emerald-500" style={{ width: `${completionPercentage}%` }}></div>
+              </div>
+            </div>
+
+            {/* Urgent & Overdue Actions */}
+            <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/20 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Urgent Action</span>
+                {overdueCount > 0 ? (
+                  <AlertTriangle size={16} className="text-rose-500 animate-pulse" />
+                ) : (
+                  <Sparkles size={16} className="text-indigo-400" />
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400 text-xs font-medium">Overdue Tasks:</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${overdueCount > 0 ? 'bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>{overdueCount}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600 dark:text-slate-400 text-xs font-medium">High Priority (Active):</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${highPriorityCount > 0 ? 'bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>{highPriorityCount}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Breakdown */}
+            <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/20 relative overflow-hidden col-span-1 sm:col-span-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status Distribution</span>
+                <span className="text-[10px] text-slate-500 font-semibold uppercase">Real-time</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {COLUMNS.map(col => {
+                  const count = tasks.filter(t => t.column === col.id).length;
+                  return (
+                    <div key={col.id} className="flex flex-col items-center justify-center p-2 rounded-lg bg-white/40 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50">
+                      <span className="text-lg font-bold text-slate-800 dark:text-white">{count}</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate w-full text-center">{col.title}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Board Layout */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-6 py-6 overflow-y-auto">
         {loading ? (
@@ -424,131 +756,248 @@ export default function App() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-            {COLUMNS.map(column => {
-              const columnTasks = filteredTasks.filter(t => t.column === column.id);
-              const isOver = activeDropColumn === column.id;
-
-              return (
-                <div
-                  key={column.id}
-                  onDragOver={(e) => handleDragOver(e, column.id)}
-                  onDrop={(e) => handleDrop(e, column.id)}
-                  onDragLeave={() => setActiveDropColumn(null)}
-                  className={`rounded-2xl border border-slate-200/80 dark:border-slate-800/70 bg-slate-100/30 dark:bg-slate-950/40 p-4 min-h-[500px] flex flex-col transition-all border-t-2 ${column.color} ${isOver ? 'drag-over' : ''}`}
-                >
-                  {/* Column Header */}
-                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200/60 dark:border-slate-900">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm tracking-wide uppercase">
-                        {column.title}
-                      </h3>
-                      <span className="bg-slate-200/80 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 px-2 py-0.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-400">
-                        {columnTasks.length}
-                      </span>
-                    </div>
-  
-                    <button 
-                      onClick={() => handleOpenCreateModal(column.id)}
-                      className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                      title="Add task to this column"
+          <>
+            {/* Sorting Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-5 bg-slate-100/50 dark:bg-slate-950/20 border border-slate-200/55 dark:border-slate-800/50 rounded-2xl p-3 backdrop-blur-md">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <ArrowUpDown size={12} className="text-indigo-500" />
+                  Sort By:
+                </span>
+                <div className="flex items-center gap-1">
+                  {[
+                    { id: 'none', label: 'Default' },
+                    { id: 'priority', label: 'Priority' },
+                    { id: 'dueDate', label: 'Due Date' },
+                    { id: 'createdAt', label: 'Date Created' }
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => setSortBy(opt.id)}
+                      className={`px-2.5 py-1 text-xs rounded-lg border font-medium cursor-pointer transition-all ${
+                        sortBy === opt.id
+                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-600/15'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
                     >
-                      <Plus size={16} />
+                      {opt.label}
                     </button>
-                  </div>
-
-                  {/* Tasks List */}
-                  <div className="flex-1 flex flex-col gap-3.5 overflow-y-auto max-h-[70vh] pr-1">
-                    {columnTasks.length === 0 ? (
-                      <div className="flex-1 border-2 border-dashed border-slate-200 dark:border-slate-900/60 rounded-xl flex flex-col items-center justify-center p-6 text-slate-400 dark:text-slate-500 text-xs text-center min-h-[120px] select-none">
-                        Drop tasks here or click '+' to create
-                      </div>
-                    ) : (
-                      columnTasks.map(task => (
-                        <div
-                          key={task.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, task.id)}
-                          onDragEnd={handleDragEnd}
-                          className="glass-card rounded-xl p-4 shadow-sm relative group cursor-grab active:cursor-grabbing"
-                        >
-                          {/* Card Header & Badges */}
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${getPriorityBadgeClass(task.priority)}`}>
-                              {task.priority}
-                            </span>
-                            
-                            {/* Card Control Buttons */}
-                            <div className="flex items-center gap-1.5 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => handleOpenEditModal(task)}
-                                className="p-1 rounded bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                                title="Edit Task"
-                              >
-                                <Edit3 size={12} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteTask(task.id)}
-                                className="p-1 rounded bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-800 hover:border-rose-200 dark:hover:border-rose-900/30 text-slate-500 dark:text-slate-400 transition-colors cursor-pointer"
-                                title="Delete Task"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Task Content */}
-                          <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm mb-1.5 break-words line-clamp-2">
-                            {task.title}
-                          </h4>
-                          {task.description && (
-                            <p className="text-slate-600 dark:text-slate-400 text-xs mb-3.5 line-clamp-3 leading-relaxed break-words">
-                              {task.description}
-                            </p>
-                          )}
-
-                          {/* Card Footer */}
-                          <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-slate-100 dark:border-slate-900/60 text-[11px] text-slate-500 dark:text-slate-400">
-                            {/* Due Date */}
-                            <div className="flex items-center gap-1.5 font-medium">
-                              <Calendar size={12} className="text-indigo-500 dark:text-indigo-400" />
-                              <span className={
-                                task.dueDate && new Date(task.dueDate) < new Date(new Date().setHours(0,0,0,0)) && task.column !== 'done'
-                                  ? 'text-rose-600 dark:text-rose-400 font-bold' 
-                                  : ''
-                              }>
-                                {task.dueDate ? new Date(task.dueDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}) : 'No due date'}
-                              </span>
-                            </div>
-
-                            {/* Mobile-Only Movement Controls */}
-                            <div className="flex md:hidden items-center gap-1">
-                              <button
-                                onClick={() => shiftTaskColumn(task.id, task.column, -1)}
-                                disabled={column.id === 'todo'}
-                                className="p-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 disabled:opacity-20 text-slate-500 dark:text-slate-400 active:bg-indigo-600 active:text-white"
-                                title="Move Left"
-                              >
-                                <ChevronLeft size={12} />
-                              </button>
-                              <button
-                                onClick={() => shiftTaskColumn(task.id, task.column, 1)}
-                                disabled={column.id === 'done'}
-                                className="p-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 disabled:opacity-20 text-slate-500 dark:text-slate-400 active:bg-indigo-600 active:text-white"
-                                title="Move Right"
-                              >
-                                <ChevronRight size={12} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Showing <strong className="text-indigo-600 dark:text-indigo-400">{filteredTasks.length}</strong> of <strong>{tasks.length}</strong> tasks
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
+              {COLUMNS.map(column => {
+                const columnTasks = sortTasks(filteredTasks.filter(t => t.column === column.id));
+                const isOver = activeDropColumn === column.id;
+
+                return (
+                  <div
+                    key={column.id}
+                    onDragOver={(e) => handleDragOver(e, column.id)}
+                    onDrop={(e) => handleDrop(e, column.id)}
+                    onDragLeave={() => setActiveDropColumn(null)}
+                    className={`rounded-2xl border border-slate-200/80 dark:border-slate-800/70 bg-slate-100/30 dark:bg-slate-950/40 p-4 min-h-[500px] flex flex-col transition-all border-t-2 ${column.color} ${isOver ? 'drag-over' : ''}`}
+                  >
+                    {/* Column Header */}
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200/60 dark:border-slate-900">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm tracking-wide uppercase">
+                          {column.title}
+                        </h3>
+                        <span className="bg-slate-200/80 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 px-2 py-0.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-400">
+                          {columnTasks.length}
+                        </span>
+                      </div>
+    
+                      <button 
+                        onClick={() => handleOpenCreateModal(column.id)}
+                        className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                        title="Add task to this column"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+
+                    {/* Tasks List */}
+                    <div className="flex-1 flex flex-col gap-3.5 overflow-y-auto max-h-[70vh] pr-1">
+                      {columnTasks.length === 0 ? (
+                        <div className="flex-1 border-2 border-dashed border-slate-200 dark:border-slate-900/60 rounded-xl flex flex-col items-center justify-center p-6 text-slate-400 dark:text-slate-500 text-xs text-center min-h-[120px] select-none">
+                          Drop tasks here or click '+' to create
+                        </div>
+                      ) : (
+                        columnTasks.map(task => (
+                          <div
+                            key={task.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task.id)}
+                            onDragEnd={handleDragEnd}
+                            className={`glass-card rounded-xl p-4 shadow-sm relative group cursor-grab active:cursor-grabbing ${
+                              task.priority === 'high' ? 'card-high-priority' : ''
+                            }`}
+                          >
+                            {/* Card Header & Badges */}
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${getPriorityBadgeClass(task.priority)}`}>
+                                {task.priority}
+                              </span>
+                              
+                              {/* Card Control Buttons */}
+                              <div className="flex items-center gap-1.5 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleOpenEditModal(task)}
+                                  className="p-1 rounded bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                                  title="Edit Task"
+                                >
+                                  <Edit3 size={12} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTask(task.id)}
+                                  className="p-1 rounded bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-800 hover:border-rose-200 dark:hover:border-rose-900/30 text-slate-500 dark:text-slate-400 transition-colors cursor-pointer"
+                                  title="Delete Task"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Task Content */}
+                            <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm mb-1.5 break-words line-clamp-2">
+                              {task.title}
+                            </h4>
+                            {task.description && (
+                              <p className="text-slate-600 dark:text-slate-400 text-xs mb-3.5 line-clamp-3 leading-relaxed break-words">
+                                {task.description}
+                              </p>
+                            )}
+
+                            {/* Tags */}
+                            {task.tags && task.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mb-2.5">
+                                {task.tags.map((tag, idx) => (
+                                  <span key={idx} className={`text-[9px] px-1.5 py-0.5 rounded font-semibold border ${getTagColorClass(tag)}`}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Subtasks Progress */}
+                            {task.subtasks && task.subtasks.length > 0 && (
+                              <div className="mt-3.5 border-t border-slate-100 dark:border-slate-900/60 pt-2.5">
+                                <div 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleCardSubtasksExpand(task.id);
+                                  }}
+                                  className="flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400 mb-1.5 cursor-pointer hover:text-indigo-500 dark:hover:text-indigo-400 select-none"
+                                >
+                                  <span className="flex items-center gap-1 font-semibold">
+                                    <CheckSquare size={11} className="text-indigo-500 dark:text-indigo-400" />
+                                    <span>Subtasks Checklist</span>
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <span>
+                                      {task.subtasks.filter(s => s.completed).length}/{task.subtasks.length}
+                                    </span>
+                                    {expandedCardSubtasks[task.id] ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                  </span>
+                                </div>
+                                <div className="progress-bar-bg h-1.5 w-full mb-1.5">
+                                  <div 
+                                    className="progress-bar-fill bg-indigo-600 dark:bg-indigo-500" 
+                                    style={{ width: `${task.subtasks.length ? Math.round((task.subtasks.filter(s => s.completed).length / task.subtasks.length) * 100) : 0}%` }}
+                                  />
+                                </div>
+
+                                {/* Expanded checklist layout */}
+                                {expandedCardSubtasks[task.id] && (
+                                  <div className="space-y-1.5 mt-2 max-h-40 overflow-y-auto pr-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    {task.subtasks.map(s => (
+                                      <div 
+                                        key={s.id} 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleToggleSubtask(task.id, s.id);
+                                        }}
+                                        className="flex items-center gap-2 p-1.5 rounded hover:bg-slate-100/50 dark:hover:bg-slate-900/50 cursor-pointer text-[10px] transition-colors"
+                                      >
+                                        <div className="text-indigo-500 dark:text-indigo-400">
+                                          {s.completed ? (
+                                            <CheckSquare size={12} className="fill-indigo-500/10" />
+                                          ) : (
+                                            <div className="h-3 w-3 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900" />
+                                          )}
+                                        </div>
+                                        <span className={`truncate ${s.completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-300 font-medium'}`}>
+                                          {s.title}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Card Footer */}
+                            <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-slate-100 dark:border-slate-900/60 text-[11px] text-slate-500 dark:text-slate-400">
+                              {/* Due Date */}
+                              <div className="flex items-center gap-1.5 font-medium">
+                                <Calendar size={12} className="text-indigo-500 dark:text-indigo-400" />
+                                <span className={
+                                  task.dueDate && new Date(task.dueDate) < new Date(new Date().setHours(0,0,0,0)) && task.column !== 'done'
+                                    ? 'text-rose-600 dark:text-rose-400 font-bold' 
+                                    : ''
+                                }>
+                                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}) : 'No due date'}
+                                </span>
+                              </div>
+
+                              {/* Assignee and Mobile controls */}
+                              <div className="flex items-center gap-2">
+                                {task.assignee && (
+                                  <div 
+                                    className={`h-5 w-5 rounded-full bg-gradient-to-tr ${getAvatarGradient(task.assignee)} flex items-center justify-center text-[9px] font-black text-white shadow-sm`}
+                                    title={`Assigned to ${task.assignee}`}
+                                  >
+                                    {getInitials(task.assignee)}
+                                  </div>
+                                )}
+
+                                {/* Mobile-Only Movement Controls */}
+                                <div className="flex md:hidden items-center gap-1">
+                                  <button
+                                    onClick={() => shiftTaskColumn(task.id, task.column, -1)}
+                                    disabled={column.id === 'todo'}
+                                    className="p-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 disabled:opacity-20 text-slate-500 dark:text-slate-400 active:bg-indigo-600 active:text-white"
+                                    title="Move Left"
+                                  >
+                                    <ChevronLeft size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => shiftTaskColumn(task.id, task.column, 1)}
+                                    disabled={column.id === 'done'}
+                                    className="p-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 disabled:opacity-20 text-slate-500 dark:text-slate-400 active:bg-indigo-600 active:text-white"
+                                    title="Move Right"
+                                  >
+                                    <ChevronRight size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </main>
 
@@ -565,9 +1014,9 @@ export default function App() {
       {/* Edit/Create Task Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/40 dark:bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-panel border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+          <div className="glass-panel border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
               <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base">
                 {editingTask ? 'Edit Task Details' : 'Create New Task'}
               </h3>
@@ -580,7 +1029,7 @@ export default function App() {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSaveTask} className="p-6 space-y-4">
+            <form onSubmit={handleSaveTask} className="p-6 space-y-4 overflow-y-auto flex-1">
               {formError && (
                 <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl p-3 text-xs flex items-center gap-2">
                   <AlertCircle size={14} />
@@ -614,9 +1063,120 @@ export default function App() {
                   value={formData.description}
                   onChange={handleFormChange}
                   placeholder="Provide details about the target goal..."
-                  rows="3"
+                  rows="2"
                   className="w-full px-4 py-2.5 rounded-xl text-sm glass-input resize-none"
                 />
+              </div>
+
+              {/* Assignee Input */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  Assignee
+                </label>
+                <div className="relative">
+                  <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                  <input
+                    type="text"
+                    name="assignee"
+                    value={formData.assignee}
+                    onChange={handleFormChange}
+                    placeholder="e.g. Alice Smith"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm glass-input"
+                  />
+                </div>
+              </div>
+
+              {/* Tags Selection */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  Tags / Labels
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTagInput}
+                    onChange={(e) => setNewTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddTag();
+                      }
+                    }}
+                    placeholder="Press Enter or click Add"
+                    className="flex-1 px-4 py-2 rounded-xl text-sm glass-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddTag}
+                    className="px-3 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-700 text-xs transition-colors cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+                {formData.tags && formData.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2 bg-slate-100/50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50 p-2 rounded-xl">
+                    {formData.tags.map(tag => (
+                      <span
+                        key={tag}
+                        className="text-xs px-2 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/10 rounded-lg flex items-center gap-1.5 font-semibold"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="text-indigo-400 hover:text-indigo-600 dark:hover:text-white"
+                        >
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Subtasks checklist builder */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  Subtasks Checklist
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newSubtaskInput}
+                    onChange={(e) => setNewSubtaskInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSubtask();
+                      }
+                    }}
+                    placeholder="e.g. Test Docker image locally"
+                    className="flex-1 px-4 py-2 rounded-xl text-sm glass-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddSubtask}
+                    className="px-3 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-700 text-xs transition-colors cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+                {formData.subtasks && formData.subtasks.length > 0 && (
+                  <div className="space-y-2 mt-2 bg-slate-100/50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50 p-2 rounded-xl max-h-36 overflow-y-auto">
+                    {formData.subtasks.map(s => (
+                      <div key={s.id} className="flex items-center justify-between gap-2 p-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 text-xs">
+                        <span className="truncate text-slate-700 dark:text-slate-300">{s.title}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSubtask(s.id)}
+                          className="p-1 text-slate-400 hover:text-rose-500 rounded transition-colors"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Columns & Priorities */}
@@ -672,7 +1232,7 @@ export default function App() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -688,6 +1248,31 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Global Confetti Overlay */}
+      {confettiParticles.length > 0 && (
+        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+          <div className="absolute top-[40%] left-[50%] transform -translate-x-1/2 -translate-y-1/2">
+            <div className="confetti-wrapper">
+              {confettiParticles.map(p => (
+                <div
+                  key={p.id}
+                  className={`confetti-particle ${p.shape}`}
+                  style={{
+                    '--dx': p.dx,
+                    '--dy': p.dy,
+                    '--rot': p.rot,
+                    '--particle-color': p.color,
+                    backgroundColor: p.color,
+                    width: p.size,
+                    height: p.size,
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
