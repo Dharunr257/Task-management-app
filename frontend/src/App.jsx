@@ -13,20 +13,41 @@ import {
   ChevronLeft, 
   X, 
   Activity,
-  AlertTriangle
+  AlertTriangle,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 const COLUMNS = [
-  { id: 'todo', title: 'To Do', color: 'border-t-blue-500 text-blue-400 bg-blue-500/5' },
-  { id: 'in_progress', title: 'In Progress', color: 'border-t-amber-500 text-amber-400 bg-amber-500/5' },
-  { id: 'review', title: 'Review', color: 'border-t-purple-500 text-purple-400 bg-purple-500/5' },
-  { id: 'done', title: 'Done', color: 'border-t-emerald-500 text-emerald-400 bg-emerald-500/5' }
+  { id: 'todo', title: 'To Do', color: 'border-t-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/5' },
+  { id: 'in_progress', title: 'In Progress', color: 'border-t-amber-500 text-amber-700 dark:text-amber-400 bg-amber-500/5' },
+  { id: 'review', title: 'Review', color: 'border-t-purple-500 text-purple-600 dark:text-purple-400 bg-purple-500/5' },
+  { id: 'done', title: 'Done', color: 'border-t-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5' }
 ];
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiOnline, setApiOnline] = useState(true);
+  
+  // Theme State
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('hchi-theme') || 'dark';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('hchi-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
   
   // Search and Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -294,12 +315,12 @@ export default function App() {
   const getPriorityBadgeClass = (priority) => {
     switch (priority) {
       case 'high':
-        return 'bg-rose-500/10 text-rose-400 border border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.1)]';
+        return 'bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 shadow-[0_0_8px_rgba(244,63,94,0.05)] dark:shadow-[0_0_8px_rgba(244,63,94,0.1)]';
       case 'medium':
-        return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+        return 'bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20';
       case 'low':
       default:
-        return 'bg-slate-500/10 text-slate-400 border border-slate-500/20';
+        return 'bg-slate-100 dark:bg-slate-500/10 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-500/20';
     }
   };
 
@@ -314,29 +335,29 @@ export default function App() {
       )}
 
       {/* Header */}
-      <header className="glass-panel border-b border-slate-800/80 px-6 py-4 sticky top-0 z-40 backdrop-blur-lg">
+      <header className="glass-panel border-b border-slate-200/80 dark:border-slate-800/80 px-6 py-4 sticky top-0 z-40 backdrop-blur-lg">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
               <Activity size={20} className="text-white animate-pulse-slow" />
             </div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-800 dark:from-white dark:via-slate-200 dark:to-slate-400 bg-clip-text text-transparent">
                 HCHI Kanban Hub
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className={`h-2 w-2 rounded-full ${apiOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}></span>
-                <span className="text-xs text-slate-400 font-medium">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                   {apiOnline ? 'Internal Router Connected' : 'Offline Mode'}
                 </span>
               </div>
             </div>
           </div>
-
+  
           <div className="flex flex-wrap items-center gap-3">
             {/* Search Bar */}
             <div className="relative flex-1 sm:w-64 min-w-[200px]">
-              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <input
                 type="text"
                 placeholder="Search tasks..."
@@ -345,22 +366,36 @@ export default function App() {
                 className="w-full pl-10 pr-4 py-2 rounded-xl text-sm glass-input focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
-
+  
             {/* Filter Dropdown */}
             <div className="relative">
-              <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="pl-8 pr-3 py-2 rounded-xl text-sm glass-input cursor-pointer appearance-none bg-slate-900 border border-slate-800 pr-8"
+                className="pl-8 pr-3 py-2 rounded-xl text-sm glass-input cursor-pointer appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 pr-8"
               >
-                <option value="all">All Priorities</option>
-                <option value="high">High Priority</option>
-                <option value="medium">Medium Priority</option>
-                <option value="low">Low Priority</option>
+                <option value="all" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">All Priorities</option>
+                <option value="high" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">High Priority</option>
+                <option value="medium" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Medium Priority</option>
+                <option value="low" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Low Priority</option>
               </select>
             </div>
 
+            {/* Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="theme-toggle-btn p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer flex items-center justify-center bg-white/50 dark:bg-slate-900/50"
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label="Toggle Theme"
+            >
+              {theme === 'dark' ? (
+                <Sun size={16} className="theme-toggle-icon text-amber-500" />
+              ) : (
+                <Moon size={16} className="theme-toggle-icon text-indigo-600" />
+              )}
+            </button>
+  
             {/* Add Task Button */}
             <button
               onClick={() => handleOpenCreateModal('todo')}
@@ -400,22 +435,22 @@ export default function App() {
                   onDragOver={(e) => handleDragOver(e, column.id)}
                   onDrop={(e) => handleDrop(e, column.id)}
                   onDragLeave={() => setActiveDropColumn(null)}
-                  className={`rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4 min-h-[500px] flex flex-col transition-all border-t-2 ${column.color} ${isOver ? 'drag-over' : ''}`}
+                  className={`rounded-2xl border border-slate-200/80 dark:border-slate-800/70 bg-slate-100/30 dark:bg-slate-950/40 p-4 min-h-[500px] flex flex-col transition-all border-t-2 ${column.color} ${isOver ? 'drag-over' : ''}`}
                 >
                   {/* Column Header */}
-                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-900">
+                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200/60 dark:border-slate-900">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-slate-200 text-sm tracking-wide uppercase">
+                      <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm tracking-wide uppercase">
                         {column.title}
                       </h3>
-                      <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-full text-xs font-semibold text-slate-400">
+                      <span className="bg-slate-200/80 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 px-2 py-0.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-400">
                         {columnTasks.length}
                       </span>
                     </div>
-
+  
                     <button 
                       onClick={() => handleOpenCreateModal(column.id)}
-                      className="p-1 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-slate-200 transition-colors"
+                      className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                       title="Add task to this column"
                     >
                       <Plus size={16} />
@@ -425,7 +460,7 @@ export default function App() {
                   {/* Tasks List */}
                   <div className="flex-1 flex flex-col gap-3.5 overflow-y-auto max-h-[70vh] pr-1">
                     {columnTasks.length === 0 ? (
-                      <div className="flex-1 border-2 border-dashed border-slate-900/60 rounded-xl flex flex-col items-center justify-center p-6 text-slate-500 text-xs text-center min-h-[120px] select-none">
+                      <div className="flex-1 border-2 border-dashed border-slate-200 dark:border-slate-900/60 rounded-xl flex flex-col items-center justify-center p-6 text-slate-400 dark:text-slate-500 text-xs text-center min-h-[120px] select-none">
                         Drop tasks here or click '+' to create
                       </div>
                     ) : (
@@ -447,14 +482,14 @@ export default function App() {
                             <div className="flex items-center gap-1.5 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleOpenEditModal(task)}
-                                className="p-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+                                className="p-1 rounded bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
                                 title="Edit Task"
                               >
                                 <Edit3 size={12} />
                               </button>
                               <button
                                 onClick={() => handleDeleteTask(task.id)}
-                                className="p-1 rounded bg-slate-900 hover:bg-rose-950/60 hover:text-rose-400 border border-slate-800 hover:border-rose-900/30 text-slate-400 transition-colors"
+                                className="p-1 rounded bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-800 hover:border-rose-200 dark:hover:border-rose-900/30 text-slate-500 dark:text-slate-400 transition-colors cursor-pointer"
                                 title="Delete Task"
                               >
                                 <Trash2 size={12} />
@@ -463,23 +498,23 @@ export default function App() {
                           </div>
 
                           {/* Task Content */}
-                          <h4 className="font-semibold text-slate-200 text-sm mb-1.5 break-words line-clamp-2">
+                          <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm mb-1.5 break-words line-clamp-2">
                             {task.title}
                           </h4>
                           {task.description && (
-                            <p className="text-slate-400 text-xs mb-3.5 line-clamp-3 leading-relaxed break-words">
+                            <p className="text-slate-600 dark:text-slate-400 text-xs mb-3.5 line-clamp-3 leading-relaxed break-words">
                               {task.description}
                             </p>
                           )}
 
                           {/* Card Footer */}
-                          <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-slate-900/60 text-[11px] text-slate-400">
+                          <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-slate-100 dark:border-slate-900/60 text-[11px] text-slate-500 dark:text-slate-400">
                             {/* Due Date */}
                             <div className="flex items-center gap-1.5 font-medium">
-                              <Calendar size={12} className="text-indigo-400" />
+                              <Calendar size={12} className="text-indigo-500 dark:text-indigo-400" />
                               <span className={
                                 task.dueDate && new Date(task.dueDate) < new Date(new Date().setHours(0,0,0,0)) && task.column !== 'done'
-                                  ? 'text-rose-400 font-bold' 
+                                  ? 'text-rose-600 dark:text-rose-400 font-bold' 
                                   : ''
                               }>
                                 {task.dueDate ? new Date(task.dueDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}) : 'No due date'}
@@ -491,7 +526,7 @@ export default function App() {
                               <button
                                 onClick={() => shiftTaskColumn(task.id, task.column, -1)}
                                 disabled={column.id === 'todo'}
-                                className="p-1.5 rounded bg-slate-900 disabled:opacity-20 text-slate-400 active:bg-indigo-600 active:text-white"
+                                className="p-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 disabled:opacity-20 text-slate-500 dark:text-slate-400 active:bg-indigo-600 active:text-white"
                                 title="Move Left"
                               >
                                 <ChevronLeft size={12} />
@@ -499,7 +534,7 @@ export default function App() {
                               <button
                                 onClick={() => shiftTaskColumn(task.id, task.column, 1)}
                                 disabled={column.id === 'done'}
-                                className="p-1.5 rounded bg-slate-900 disabled:opacity-20 text-slate-400 active:bg-indigo-600 active:text-white"
+                                className="p-1.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 disabled:opacity-20 text-slate-500 dark:text-slate-400 active:bg-indigo-600 active:text-white"
                                 title="Move Right"
                               >
                                 <ChevronRight size={12} />
@@ -529,16 +564,16 @@ export default function App() {
 
       {/* Edit/Create Task Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-panel border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-slate-950/40 dark:bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-panel border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-              <h3 className="font-bold text-slate-100 text-base">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base">
                 {editingTask ? 'Edit Task Details' : 'Create New Task'}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-slate-200 transition-colors"
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
               >
                 <X size={18} />
               </button>
@@ -555,7 +590,7 @@ export default function App() {
 
               {/* Title */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                   Task Title *
                 </label>
                 <input
@@ -571,7 +606,7 @@ export default function App() {
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                   Description
                 </label>
                 <textarea
@@ -587,42 +622,42 @@ export default function App() {
               {/* Columns & Priorities */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Board Status
                   </label>
                   <select
                     name="column"
                     value={formData.column}
                     onChange={handleFormChange}
-                    className="w-full px-4 py-2.5 rounded-xl text-sm glass-input bg-slate-900 border border-slate-800 cursor-pointer"
+                    className="w-full px-4 py-2.5 rounded-xl text-sm glass-input bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 cursor-pointer"
                   >
-                    <option value="todo">To Do</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="review">Review</option>
-                    <option value="done">Done</option>
+                    <option value="todo" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">To Do</option>
+                    <option value="in_progress" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">In Progress</option>
+                    <option value="review" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Review</option>
+                    <option value="done" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Done</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Priority
                   </label>
                   <select
                     name="priority"
                     value={formData.priority}
                     onChange={handleFormChange}
-                    className="w-full px-4 py-2.5 rounded-xl text-sm glass-input bg-slate-900 border border-slate-800 cursor-pointer"
+                    className="w-full px-4 py-2.5 rounded-xl text-sm glass-input bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 cursor-pointer"
                   >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
+                    <option value="low" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Low</option>
+                    <option value="medium" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">Medium</option>
+                    <option value="high" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">High</option>
                   </select>
                 </div>
               </div>
 
               {/* Due Date */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                   Due Date
                 </label>
                 <div className="relative">
@@ -631,17 +666,17 @@ export default function App() {
                     name="dueDate"
                     value={formData.dueDate}
                     onChange={handleFormChange}
-                    className="w-full px-4 py-2.5 rounded-xl text-sm glass-input bg-slate-900 border border-slate-800 text-slate-200"
+                    className="w-full px-4 py-2.5 rounded-xl text-sm glass-input bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200"
                   />
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-all cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all cursor-pointer"
                 >
                   Cancel
                 </button>

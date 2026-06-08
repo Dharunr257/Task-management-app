@@ -2,6 +2,8 @@
 
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   
@@ -19,49 +21,95 @@
   }
 }
 
+:root {
+  /* Light mode properties */
+  --bg-main: #f8fafc;
+  --text-main: #0f172a;
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-card-bg: rgba(255, 255, 255, 0.55);
+  --glass-card-border: rgba(0, 0, 0, 0.06);
+  --glass-card-hover: rgba(255, 255, 255, 0.95);
+  --glass-card-hover-border: rgba(99, 102, 241, 0.25);
+  --glass-input-bg: rgba(255, 255, 255, 0.75);
+  --glass-input-border: rgba(0, 0, 0, 0.1);
+  --glass-input-color: #0f172a;
+  --glass-input-focus-bg: rgba(255, 255, 255, 0.95);
+  
+  --scrollbar-track: rgba(241, 245, 249, 0.5);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
+}
+
+:root.dark {
+  /* Dark mode properties */
+  --bg-main: #0b0f19;
+  --text-main: #f3f4f6;
+  --glass-bg: rgba(17, 24, 39, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-card-bg: rgba(30, 41, 59, 0.45);
+  --glass-card-border: rgba(255, 255, 255, 0.05);
+  --glass-card-hover: rgba(30, 41, 59, 0.6);
+  --glass-card-hover-border: rgba(99, 102, 241, 0.25);
+  --glass-input-bg: rgba(17, 24, 39, 0.5);
+  --glass-input-border: rgba(255, 255, 255, 0.1);
+  --glass-input-color: #f3f4f6;
+  --glass-input-focus-bg: rgba(17, 24, 39, 0.75);
+  
+  --scrollbar-track: rgba(11, 15, 25, 0.5);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
+}
+
 /* Custom Base Styles */
 body {
-  background-color: #0b0f19;
-  color: #f3f4f6;
+  background-color: var(--bg-main);
+  color: var(--text-main);
   font-family: var(--font-sans);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Glassmorphism utility classes */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.7);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .glass-card {
-  background: rgba(30, 41, 59, 0.45);
+  background: var(--glass-card-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-card-border);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
-  background: rgba(30, 41, 59, 0.6);
-  border-color: rgba(99, 102, 241, 0.25);
+  background: var(--glass-card-hover);
+  border-color: var(--glass-card-hover-border);
   transform: translateY(-2px);
+  box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.15);
+}
+
+.dark .glass-card:hover {
   box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.5);
 }
 
 .glass-input {
-  background: rgba(17, 24, 39, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #f3f4f6;
+  background: var(--glass-input-bg);
+  border: 1px solid var(--glass-input-border);
+  color: var(--glass-input-color);
   transition: all 0.2s ease;
 }
 
 .glass-input:focus {
   outline: none;
   border-color: rgba(99, 102, 241, 0.5);
-  background: rgba(17, 24, 39, 0.75);
+  background: var(--glass-input-focus-bg);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
@@ -78,14 +126,23 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(11, 15, 25, 0.5);
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--scrollbar-thumb);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Rotational micro-animation for theme toggle button */
+.theme-toggle-icon {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-toggle-btn:hover .theme-toggle-icon {
+  transform: rotate(30deg);
 }
