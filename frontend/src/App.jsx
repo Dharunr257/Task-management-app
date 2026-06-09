@@ -21,8 +21,76 @@ import {
   BarChart3,
   Sparkles,
   ArrowUpDown,
-  TrendingUp
+  TrendingUp,
+  Cpu,
+  HardDrive,
+  Thermometer,
+  Database,
+  ClipboardList,
+  CheckCircle2,
+  Bell,
+  Terminal,
+  RefreshCw,
+  Eye
 } from 'lucide-react';
+
+const getColumnIcon = (columnId, size = 16) => {
+  switch (columnId) {
+    case 'todo':
+      return <ClipboardList size={size} className="text-blue-500" />;
+    case 'in_progress':
+      return <Activity size={size} className="text-amber-500 animate-pulse-slow" />;
+    case 'review':
+      return <Eye size={size} className="text-purple-500" />;
+    case 'done':
+      return <CheckCircle2 size={size} className="text-emerald-500" />;
+    default:
+      return <ClipboardList size={size} />;
+  }
+};
+
+const createLogEntry = (type, message) => ({
+  id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+  type,
+  message,
+  timestamp: new Date()
+});
+
+const INITIAL_LOGS = [
+  {
+    id: 'pre-1',
+    type: 'system',
+    message: 'HCHI platform engine initiated. Self-hosted runner online.',
+    timestamp: new Date(Date.now() - 3600000 * 2.5)
+  },
+  {
+    id: 'pre-2',
+    type: 'build',
+    message: 'Docker container build succeeded for hchi-task-manager-backend.',
+    timestamp: new Date(Date.now() - 3600000 * 1.8)
+  },
+  {
+    id: 'pre-3',
+    type: 'system',
+    message: 'Reverse proxy created: task-manager.homelab routing to host port 3031.',
+    timestamp: new Date(Date.now() - 3600000 * 1.2)
+  }
+];
+
+const formatLogTime = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  const diffMs = Date.now() - d.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  
+  if (diffSec < 10) return 'Just now';
+  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  return d.toLocaleTimeString(undefined, {hour: '2-digit', minute: '2-digit'});
+};
 
 const COLUMNS = [
   { id: 'todo', title: 'To Do', color: 'border-t-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/5' },
@@ -170,6 +238,96 @@ export default function App() {
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [activeDropColumn, setActiveDropColumn] = useState(null);
 
+  // Node Monitor and Sidebar Drawer States
+  const [logFilter, setLogFilter] = useState('all');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [activityLogs, setActivityLogs] = useState(() => INITIAL_LOGS);
+
+  const [nodeStats, setNodeStats] = useState({
+    pi5: { cpu: 28, ram: 5.2, temp: 48, containers: 6, status: 'active', ip: '192.168.1.10', cpuHistory: [25, 28, 26, 30, 24, 29, 27, 28, 31, 28] },
+    pi4_1: { cpu: 14, ram: 2.1, temp: 43, containers: 3, status: 'active', ip: '192.168.1.11', cpuHistory: [12, 14, 15, 13, 16, 12, 15, 14, 13, 14] },
+    pi4_2: { cpu: 0, ram: 0, temp: 0, containers: 0, status: 'standby', ip: '192.168.1.12', cpuHistory: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }
+  });
+
+  const addActivityLog = (type, message) => {
+    setActivityLogs(prev => [createLogEntry(type, message), ...prev]);
+  };
+
+  const handleBootNode = (key) => {
+    setNodeStats(prev => {
+      const next = { ...prev };
+      next[key] = {
+        ...next[key],
+        status: 'active',
+        containers: 2,
+        ram: 1.1,
+        temp: 36,
+        cpu: 15,
+        cpuHistory: [0, 0, 0, 0, 0, 0, 0, 0, 5, 15]
+      };
+      return next;
+    });
+    
+    const nodeName = key === 'pi5' ? 'hchi-pi5-master' : key === 'pi4_1' ? 'hchi-pi4-worker1' : 'hchi-pi4-worker2';
+    addActivityLog('system', `WOL boot command executed for node ${nodeName}. Node is now active.`);
+  };
+
+  const filteredLogs = activityLogs.filter(log => {
+    if (logFilter === 'all') return true;
+    return log.type === logFilter;
+  });
+
+  // Simulated node telemetry update loop
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNodeStats(prev => {
+        const next = { ...prev };
+        
+        // hchi-pi5-master
+        if (next.pi5.status === 'active') {
+          const nextCpu = Math.max(5, Math.min(95, Math.round(next.pi5.cpu + (Math.random() * 10 - 5))));
+          const nextHistory = [...next.pi5.cpuHistory.slice(1), nextCpu];
+          const nextTemp = Math.max(45, Math.min(75, Math.round(next.pi5.temp + (Math.random() * 2 - 1))));
+          next.pi5 = { ...next.pi5, cpu: nextCpu, cpuHistory: nextHistory, temp: nextTemp };
+        }
+        
+        // hchi-pi4-worker1
+        if (next.pi4_1.status === 'active') {
+          const nextCpu = Math.max(5, Math.min(95, Math.round(next.pi4_1.cpu + (Math.random() * 8 - 4))));
+          const nextHistory = [...next.pi4_1.cpuHistory.slice(1), nextCpu];
+          const nextTemp = Math.max(40, Math.min(65, Math.round(next.pi4_1.temp + (Math.random() * 1.6 - 0.8))));
+          next.pi4_1 = { ...next.pi4_1, cpu: nextCpu, cpuHistory: nextHistory, temp: nextTemp };
+        }
+        
+        // hchi-pi4-worker2
+        if (next.pi4_2.status === 'active') {
+          const nextCpu = Math.max(5, Math.min(95, Math.round(next.pi4_2.cpu + (Math.random() * 8 - 4))));
+          const nextHistory = [...next.pi4_2.cpuHistory.slice(1), nextCpu];
+          const nextTemp = Math.max(40, Math.min(65, Math.round(next.pi4_2.temp + (Math.random() * 2 - 1))));
+          next.pi4_2 = { ...next.pi4_2, cpu: nextCpu, cpuHistory: nextHistory, temp: nextTemp };
+        } else {
+          next.pi4_2 = { ...next.pi4_2, cpu: 0, temp: 0, cpuHistory: [...next.pi4_2.cpuHistory.slice(1), 0] };
+        }
+        
+        return next;
+      });
+
+      // Occasionally trigger a build simulation or a small platform alert log
+      if (Math.random() < 0.1) {
+        const events = [
+          { type: 'build', message: 'HCHI Engine: Completed periodic application health check. All endpoints responsive.' },
+          { type: 'system', message: 'Nginx Proxy Manager: DNS configuration validated for task-manager.homelab.' },
+          { type: 'build', message: 'HCHI Runner: Cleaned up untagged docker build cache on hchi-pi5-master.' }
+        ];
+        const randomEvent = events[Math.floor(Math.random() * events.length)];
+        addActivityLog(randomEvent.type, randomEvent.message);
+      }
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+
   const loadTasks = async () => {
     setLoading(true);
     try {
@@ -249,6 +407,12 @@ export default function App() {
       return t;
     });
     setTasks(updatedTasks);
+
+    const oldTask = tasks.find(t => t.id === taskId);
+    const sub = oldTask?.subtasks?.find(s => s.id === subtaskId);
+    if (oldTask && sub) {
+      addActivityLog('board', `Subtask "${sub.title}" in task "${oldTask.title}" marked as ${!sub.completed ? 'completed' : 'incomplete'}`);
+    }
 
     const taskToUpdate = updatedTasks.find(t => t.id === taskId);
     if (!taskToUpdate) return;
@@ -407,9 +571,11 @@ export default function App() {
     if (editingTask) {
       // Edit mode
       setTasks(prev => prev.map(t => t.id === editingTask.id ? taskForState : t));
+      addActivityLog('board', `Task "${payload.title}" details updated`);
     } else {
       // Add mode
       setTasks(prev => [...prev, taskForState]);
+      addActivityLog('board', `New task "${payload.title}" created in "${COLUMNS.find(c => c.id === payload.column)?.title || payload.column}"`);
     }
 
     setIsModalOpen(false);
@@ -453,6 +619,10 @@ export default function App() {
 
     // Optimistic UI update
     const previousTasks = [...tasks];
+    const taskToDelete = tasks.find(t => t.id === taskId);
+    if (taskToDelete) {
+      addActivityLog('board', `Task "${taskToDelete.title}" was deleted`);
+    }
     setTasks(prev => prev.filter(t => t.id !== taskId));
 
     try {
@@ -477,6 +647,13 @@ export default function App() {
       return t;
     });
     setTasks(updatedTasks);
+
+    const taskToMove = tasks.find(t => t.id === taskId);
+    if (taskToMove) {
+      const oldCol = COLUMNS.find(c => c.id === taskToMove.column)?.title || taskToMove.column;
+      const newCol = COLUMNS.find(c => c.id === newColumn)?.title || newColumn;
+      addActivityLog('board', `Moved task "${taskToMove.title}" from "${oldCol}" to "${newCol}"`);
+    }
 
     if (newColumn === 'done') {
       triggerConfetti();
@@ -640,6 +817,17 @@ export default function App() {
               </select>
             </div>
 
+            {/* Activity Logs Trigger Button */}
+            <button
+              onClick={() => setIsDrawerOpen(true)}
+              className="relative p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer flex items-center justify-center bg-white/50 dark:bg-slate-900/50"
+              title="Open Platform Activity & Logs"
+              aria-label="Activity Feed"
+            >
+              <Bell size={16} className="text-indigo-500 dark:text-indigo-400" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
+            </button>
+
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
@@ -737,6 +925,110 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          {/* HCHI Cluster Nodes Status */}
+          <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/70 bg-white/50 dark:bg-slate-950/20 backdrop-blur-md mb-2 shadow-sm mt-4">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-200/60 dark:border-slate-800/80 pb-2">
+              <div className="flex items-center gap-2">
+                <Cpu size={16} className="text-indigo-500 animate-pulse" />
+                <h3 className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">HCHI Cluster Nodes Status</h3>
+              </div>
+              <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Simulated Cluster Hardware Monitor</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Object.entries(nodeStats).map(([key, node]) => {
+                const isMaster = key === 'pi5';
+                const name = isMaster ? 'hchi-pi5-master' : key === 'pi4_1' ? 'hchi-pi4-worker1' : 'hchi-pi4-worker2';
+                const label = isMaster ? 'Primary Host' : key === 'pi4_1' ? 'Worker Node' : 'Worker Node';
+                const isActive = node.status === 'active';
+                const maxRam = isMaster ? 8 : 4;
+                
+                return (
+                  <div key={key} className={`flex flex-col p-4 rounded-xl border border-slate-200/80 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-900/10 relative overflow-hidden transition-all duration-300 ${!isActive ? 'opacity-65' : ''}`}>
+                    {/* Node Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`glow-indicator ${isActive ? 'glow-green' : 'glow-amber'}`}></span>
+                          <span className="font-bold text-xs text-slate-850 dark:text-slate-200 uppercase tracking-wider">{name}</span>
+                        </div>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold block mt-0.5">{node.ip} &bull; {label}</span>
+                      </div>
+                      
+                      {isActive ? (
+                        <div className="flex items-center">
+                          <svg className="h-6 w-20 overflow-visible" viewBox="0 0 120 30">
+                            <path
+                              fill="none"
+                              stroke={isMaster ? '#6366f1' : '#10b981'}
+                              strokeWidth="1.5"
+                              d={`M ${node.cpuHistory.map((val, idx) => {
+                                const x = (idx / (node.cpuHistory.length - 1)) * 120;
+                                const y = 30 - (val / 100) * 26 - 2;
+                                return `${x} ${y}`;
+                              }).join(' L ')}`}
+                              className="transition-all duration-300"
+                            />
+                          </svg>
+                        </div>
+                      ) : (
+                        <button 
+                          type="button" 
+                          onClick={() => handleBootNode(key)}
+                          className="px-2 py-0.5 rounded text-[8px] font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors shadow-sm cursor-pointer select-none active:scale-95"
+                        >
+                          Wake-on-LAN
+                        </button>
+                      )}
+                    </div>
+
+                    {isActive ? (
+                      <div className="space-y-2 mt-auto">
+                        {/* CPU / RAM metrics */}
+                        <div className="grid grid-cols-2 gap-2 text-[10px]">
+                          <div className="bg-white/40 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/30 rounded p-1.5">
+                            <div className="flex items-center justify-between text-slate-500 mb-0.5">
+                              <span className="flex items-center gap-0.5 font-bold uppercase text-[7px]"><Cpu size={10} /> CPU</span>
+                              <span className="font-bold text-slate-800 dark:text-white text-[9px]">{node.cpu}%</span>
+                            </div>
+                            <div className="h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-indigo-500" style={{ width: `${node.cpu}%`, transition: 'width 0.4s ease' }}></div>
+                            </div>
+                          </div>
+                          <div className="bg-white/40 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/30 rounded p-1.5">
+                            <div className="flex items-center justify-between text-slate-500 mb-0.5">
+                              <span className="flex items-center gap-0.5 font-bold uppercase text-[7px]"><HardDrive size={10} /> RAM</span>
+                              <span className="font-bold text-slate-800 dark:text-white text-[9px]">{node.ram} GB</span>
+                            </div>
+                            <div className="h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-indigo-500" style={{ width: `${(node.ram / maxRam) * 100}%`, transition: 'width 0.4s ease' }}></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Temp & Containers */}
+                        <div className="grid grid-cols-2 gap-2 text-[9px]">
+                          <div className="flex items-center gap-1 p-1 px-1.5 rounded bg-white/20 dark:bg-slate-900/20 text-slate-600 dark:text-slate-400 font-medium">
+                            <Thermometer size={10} className={node.temp > 65 ? 'text-rose-500 animate-bounce' : 'text-indigo-400'} />
+                            <span>Temp: <strong className={node.temp > 65 ? 'text-rose-500 font-bold' : 'text-slate-800 dark:text-slate-300'}>{node.temp}°C</strong></span>
+                          </div>
+                          <div className="flex items-center gap-1 p-1 px-1.5 rounded bg-white/20 dark:bg-slate-900/20 text-slate-600 dark:text-slate-400 font-medium">
+                            <Database size={10} className="text-emerald-400" />
+                            <span>Containers: <strong className="text-slate-800 dark:text-slate-300">{node.containers}</strong></span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-14 flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-800/60 rounded-lg text-slate-400 dark:text-slate-500 text-[9px] font-bold tracking-wide uppercase select-none">
+                        SYSTEM IN SLEEP STATE
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -806,6 +1098,7 @@ export default function App() {
                     {/* Column Header */}
                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200/60 dark:border-slate-900">
                       <div className="flex items-center gap-2">
+                        {getColumnIcon(column.id)}
                         <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm tracking-wide uppercase">
                           {column.title}
                         </h3>
@@ -1276,6 +1569,105 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Activity Logs Sidebar Drawer */}
+      {isDrawerOpen && (
+        <div 
+          className="drawer-backdrop"
+          onClick={() => setIsDrawerOpen(false)}
+        />
+      )}
+      <div className={`activity-drawer ${isDrawerOpen ? 'drawer-open' : 'drawer-closed'} flex flex-col h-full`}>
+        {/* Drawer Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <Terminal size={16} className="text-indigo-500" />
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">HCHI Platform Logs</h3>
+          </div>
+          <button
+            onClick={() => setIsDrawerOpen(false)}
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="px-5 py-3 border-b border-slate-200/60 dark:border-slate-800 flex gap-1.5 overflow-x-auto flex-shrink-0">
+          {[
+            { id: 'all', label: 'All Logs' },
+            { id: 'board', label: 'Board' },
+            { id: 'system', label: 'System' },
+            { id: 'build', label: 'Builds' }
+          ].map(f => (
+            <button
+              key={f.id}
+              onClick={() => setLogFilter(f.id)}
+              className={`px-2.5 py-1 text-[9px] rounded-lg border font-semibold cursor-pointer transition-all ${
+                logFilter === f.id
+                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                  : 'bg-white/40 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+          <button
+            onClick={() => setActivityLogs([
+              { id: `clear-${Date.now()}`, type: 'system', message: 'Activity logs cleared by administrator', timestamp: new Date() }
+            ])}
+            className="ml-auto px-2 py-1 text-[9px] font-bold text-slate-400 hover:text-rose-500 transition-colors flex items-center gap-1 cursor-pointer select-none"
+            title="Clear Log History"
+          >
+            <Trash2 size={10} /> Clear
+          </button>
+        </div>
+
+        {/* Log List */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-3.5 graph-grid">
+          {filteredLogs.length === 0 ? (
+            <div className="text-center text-slate-400 dark:text-slate-500 text-xs py-10">
+              No logs in this category.
+            </div>
+          ) : (
+            filteredLogs.map(log => (
+              <div key={log.id} className="flex gap-2.5 text-xs border-b border-slate-200/30 dark:border-slate-800/20 pb-3 last:border-b-0">
+                <div className="mt-0.5 flex-shrink-0">
+                  {log.type === 'board' ? (
+                    <div className="h-5 w-5 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
+                      <ClipboardList size={11} />
+                    </div>
+                  ) : log.type === 'build' ? (
+                    <div className="h-5 w-5 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
+                      <RefreshCw size={11} className="animate-spin-slow" />
+                    </div>
+                  ) : (
+                    <div className="h-5 w-5 rounded bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500">
+                      <Cpu size={11} />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-700 dark:text-slate-300 font-medium break-words leading-relaxed text-[11px]">
+                    {log.message}
+                  </p>
+                  <span className="text-[8px] text-slate-400 dark:text-slate-500 font-semibold block mt-1">
+                    {formatLogTime(log.timestamp)}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Drawer Footer */}
+        <div className="p-4 border-t border-slate-200 dark:border-slate-850 bg-white/30 dark:bg-slate-900/20 backdrop-blur-md flex-shrink-0">
+          <div className="flex items-center justify-between text-[10px] text-slate-500">
+            <span className="flex items-center gap-1 font-semibold uppercase"><Terminal size={10} /> Shell status: Active</span>
+            <span className="font-semibold text-indigo-500">{apiOnline ? 'ROUTER ONLINE' : 'OFFLINE MODE'}</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

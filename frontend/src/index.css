@@ -301,3 +301,108 @@ body {
   box-shadow: 0 0 15px rgba(99, 102, 241, 0.15) inset;
 }
 
+/* Sidebar Activity Drawer Styles */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(4px);
+  z-index: 45;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dark .drawer-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.activity-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 420px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid var(--glass-border);
+  z-index: 50;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .activity-drawer {
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.drawer-open {
+  transform: translateX(0);
+}
+
+.drawer-closed {
+  transform: translateX(100%);
+}
+
+/* Glowing Indicator Dots for Node Status */
+.glow-indicator {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+}
+
+.glow-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 9999px;
+  animation: glow-pulse 2s infinite ease-in-out;
+}
+
+.glow-green {
+  background-color: #10b981;
+}
+.glow-green::after {
+  box-shadow: 0 0 8px #10b981;
+  background-color: #10b981;
+}
+
+.glow-amber {
+  background-color: #f59e0b;
+}
+.glow-amber::after {
+  box-shadow: 0 0 8px #f59e0b;
+  background-color: #f59e0b;
+}
+
+.glow-red {
+  background-color: #f43f5e;
+}
+.glow-red::after {
+  box-shadow: 0 0 8px #f43f5e;
+  background-color: #f43f5e;
+}
+
+@keyframes glow-pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* Real-time wave charts grid animations */
+.graph-grid {
+  background-image: 
+    linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.dark .graph-grid {
+  background-image: 
+    linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+}
+
+
